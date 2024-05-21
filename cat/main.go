@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -8,14 +10,18 @@ import (
 )
 
 func main() {
+	numberLinesEnabled := flag.Bool("n", false, "number all output lines")
+	flag.Parse()
+
 	var filenames []string
-	if len(os.Args) >= 2 {
-		filenames = os.Args[1:]
+	if flag.NArg() >= 1 {
+		filenames = flag.Args()
 	} else {
 		filenames = []string{""}
 	}
 
-	var output strings.Builder
+	i := 0
+	lines := make([]string, 0)
 	for _, filename := range filenames {
 		var input io.Reader
 		if filename == "" || filename == "-" {
@@ -30,13 +36,16 @@ func main() {
 			input = file
 		}
 
-		content, err := io.ReadAll(input)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+		scanner := bufio.NewScanner(input)
+		for scanner.Scan() {
+			if *numberLinesEnabled {
+				lines = append(lines, fmt.Sprintf("%6d  %s\n", i+1, scanner.Text()))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s\n", scanner.Text()))
+			}
+			i++
 		}
-		output.WriteString(string(content))
 	}
 
-	fmt.Printf("%s", output.String())
+	fmt.Printf("%s", strings.Join(lines, ""))
 }
