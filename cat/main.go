@@ -4,32 +4,39 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 func main() {
-	var filename string
+	var filenames []string
 	if len(os.Args) >= 2 {
-		filename = os.Args[1]
+		filenames = os.Args[1:]
+	} else {
+		filenames = []string{""}
 	}
 
-	var input io.Reader
-	if filename == "" || filename == "-" {
-		input = os.Stdin
-	} else {
-		file, err := os.Open(filename)
+	var output strings.Builder
+	for _, filename := range filenames {
+		var input io.Reader
+		if filename == "" || filename == "-" {
+			input = os.Stdin
+		} else {
+			file, err := os.Open(filename)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			defer file.Close()
+			input = file
+		}
+
+		content, err := io.ReadAll(input)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		defer file.Close()
-		input = file
+		output.WriteString(string(content))
 	}
 
-	content, err := io.ReadAll(input)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%s", content)
+	fmt.Printf("%s", output.String())
 }
