@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"io"
 	"os"
 
@@ -18,6 +19,10 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	flagLines, err := cmd.Flags().GetBool("lines")
+	if err != nil {
+		return err
+	}
 
 	filename := args[0]
 	file, err := os.Open(filename)
@@ -26,20 +31,37 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	}
 	defer file.Close()
 
+	var (
+		byteCounts, lineCounts int64
+	)
+
 	if flagBytes {
-		byteCounts, err := file.Seek(0, io.SeekEnd)
+		byteCounts, err = file.Seek(0, io.SeekEnd)
 		if err != nil {
 			return err
 		}
-
-		cmd.Printf("%d %s\n", byteCounts, filename)
+		_, err := file.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		cmd.Printf("%d ", byteCounts)
 	}
 
+	if flagLines {
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			lineCounts++
+		}
+		cmd.Printf("%d ", lineCounts)
+	}
+
+	cmd.Printf("%s\n", filename)
 	return nil
 }
 
 func rootCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("bytes", "c", false, "print the byte counts")
+	cmd.Flags().BoolP("lines", "l", false, "print the newline counts")
 }
 
 func Execute() {
