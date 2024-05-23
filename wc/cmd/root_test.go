@@ -46,6 +46,13 @@ func TestRootCmd(t *testing.T) {
 			out:  "7145 ../test.txt",
 			err:  nil,
 		},
+		{
+			name: "print word counts",
+			args: []string{"-w", "../test.txt"},
+			in:   "",
+			out:  "58164 ../test.txt",
+			err:  nil,
+		},
 	}
 
 	for _, tc := range tt {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,10 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	flagWords, err := cmd.Flags().GetBool("words")
+	if err != nil {
+		return err
+	}
 
 	filename := args[0]
 	file, err := os.Open(filename)
@@ -32,7 +37,7 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	defer file.Close()
 
 	var (
-		byteCounts, lineCounts int64
+		byteCounts, lineCounts, wordCounts int64
 	)
 
 	if flagBytes {
@@ -47,12 +52,24 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 		cmd.Printf("%d ", byteCounts)
 	}
 
-	if flagLines {
+	if flagLines || flagWords {
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
-			lineCounts++
+			if flagLines {
+				lineCounts++
+			}
+
+			if flagWords {
+				wordCounts += int64(len(strings.Fields(scanner.Text())))
+			}
 		}
-		cmd.Printf("%d ", lineCounts)
+
+		if flagLines {
+			cmd.Printf("%d ", lineCounts)
+		}
+		if flagWords {
+			cmd.Printf("%d ", wordCounts)
+		}
 	}
 
 	cmd.Printf("%s\n", filename)
@@ -62,6 +79,7 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 func rootCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("bytes", "c", false, "print the byte counts")
 	cmd.Flags().BoolP("lines", "l", false, "print the newline counts")
+	cmd.Flags().BoolP("words", "w", false, "print the word counts")
 }
 
 func Execute() {
