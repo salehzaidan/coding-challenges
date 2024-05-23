@@ -39,15 +39,21 @@ func TestRootCmd(t *testing.T) {
 			out:  "342190 ../test.txt",
 			err:  nil,
 		},
+		{
+			name: "print newline counts",
+			args: []string{"-l", "../test.txt"},
+			in:   "",
+			out:  "7145 ../test.txt",
+			err:  nil,
+		},
 	}
 
-	root := &cobra.Command{RunE: rootCmdRunE}
-	rootCmdFlags(root)
-
 	for _, tc := range tt {
-		out, err := execute(t, root, tc.in, tc.args...)
-
 		t.Run(tc.name, func(t *testing.T) {
+			root := &cobra.Command{RunE: rootCmdRunE}
+			rootCmdFlags(root)
+			out, err := execute(t, root, tc.in, tc.args...)
+
 			if err != tc.err {
 				t.Errorf("expect %q, got %q", tc.err, err)
 				return
