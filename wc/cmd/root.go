@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -12,7 +15,6 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:  "ccwc [file]",
-	Args: cobra.ExactArgs(1),
 	RunE: rootCmdRunE,
 }
 
@@ -34,58 +36,103 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	filename := args[0]
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
+	if !flagBytes && !flagLines && !flagWords && !flagChars {
+		flagBytes = true
+		flagLines = true
+		flagWords = true
 	}
-	defer file.Close()
+
+	var filename string
+	if len(args) >= 1 {
+		filename = args[0]
+	} else {
+		filename = ""
+	}
+
+	var input io.ReadSeeker
+	if filename == "" || filename == "-" {
+		content, err := io.ReadAll(cmd.InOrStdin())
+		if err != nil {
+			return err
+		}
+		input = bytes.NewReader(content)
+	} else {
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		input = file
+	}
 
 	var (
-		byteCounts, lineCounts, wordCounts, charCounts int64
+		byteCounts, lineCounts, wordCounts, charCounts int
+		maxCountLen                                    int
 	)
 
-	if flagBytes {
-		byteCounts, err = file.Seek(0, io.SeekEnd)
-		if err != nil {
-			return err
-		}
-		_, err := file.Seek(0, io.SeekStart)
-		if err != nil {
-			return err
-		}
-		cmd.Printf("%d ", byteCounts)
-	}
-
 	if flagLines || flagWords {
-		scanner := bufio.NewScanner(file)
+		scanner := bufio.NewScanner(input)
 		for scanner.Scan() {
 			if flagLines {
 				lineCounts++
 			}
 
 			if flagWords {
-				wordCounts += int64(len(strings.Fields(scanner.Text())))
+				wordCounts += len(strings.Fields(scanner.Text()))
 			}
+		}
+		_, err = input.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
 		}
 
 		if flagLines {
-			cmd.Printf("%d ", lineCounts)
+			maxCountLen = max(maxCountLen, len(strconv.Itoa(lineCounts)))
 		}
 		if flagWords {
-			cmd.Printf("%d ", wordCounts)
+			maxCountLen = max(maxCountLen, len(strconv.Itoa(wordCounts)))
 		}
 	}
 
 	if flagChars {
-		content, err := io.ReadAll(file)
+		content, err := io.ReadAll(input)
 		if err != nil {
 			return err
 		}
-		charCounts = int64(utf8.RuneCount(content))
-		cmd.Printf("%d ", charCounts)
+		_, err = input.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		charCounts = utf8.RuneCount(content)
+		maxCountLen = max(maxCountLen, len(strconv.Itoa(charCounts)))
 	}
 
+	if flagBytes {
+		n, err := input.Seek(0, io.SeekEnd)
+		if err != nil {
+			return err
+		}
+		byteCounts = int(n)
+		_, err = input.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		maxCountLen = max(maxCountLen, len(strconv.Itoa(byteCounts)))
+	}
+
+	countFormat := fmt.Sprintf("%%%dd ", maxCountLen)
+	if flagLines {
+		cmd.Printf(countFormat, lineCounts)
+	}
+	if flagWords {
+		cmd.Printf(countFormat, wordCounts)
+	}
+	if flagChars {
+		cmd.Printf(countFormat, charCounts)
+	}
+	if flagBytes {
+		cmd.Printf(countFormat, byteCounts)
+	}
 	cmd.Printf("%s\n", filename)
 	return nil
 }
