@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/spf13/cobra"
 )
@@ -28,6 +29,10 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	flagChars, err := cmd.Flags().GetBool("chars")
+	if err != nil {
+		return err
+	}
 
 	filename := args[0]
 	file, err := os.Open(filename)
@@ -37,7 +42,7 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 	defer file.Close()
 
 	var (
-		byteCounts, lineCounts, wordCounts int64
+		byteCounts, lineCounts, wordCounts, charCounts int64
 	)
 
 	if flagBytes {
@@ -72,6 +77,15 @@ func rootCmdRunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if flagChars {
+		content, err := io.ReadAll(file)
+		if err != nil {
+			return err
+		}
+		charCounts = int64(utf8.RuneCount(content))
+		cmd.Printf("%d ", charCounts)
+	}
+
 	cmd.Printf("%s\n", filename)
 	return nil
 }
@@ -80,6 +94,7 @@ func rootCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("bytes", "c", false, "print the byte counts")
 	cmd.Flags().BoolP("lines", "l", false, "print the newline counts")
 	cmd.Flags().BoolP("words", "w", false, "print the word counts")
+	cmd.Flags().BoolP("chars", "m", false, "print the character counts")
 }
 
 func Execute() {

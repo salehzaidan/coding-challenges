@@ -53,6 +53,13 @@ func TestRootCmd(t *testing.T) {
 			out:  "58164 ../test.txt",
 			err:  nil,
 		},
+		{
+			name: "print character counts",
+			args: []string{"-m", "../test.txt"},
+			in:   "",
+			out:  "339292 ../test.txt",
+			err:  nil,
+		},
 	}
 
 	for _, tc := range tt {
