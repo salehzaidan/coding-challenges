@@ -124,13 +124,12 @@ func TestRootCmd(t *testing.T) {
 		},
 	}
 
-	root := &cobra.Command{RunE: rootCmdRunE}
-	rootCmdFlags(root)
-
 	for _, tc := range tt {
-		out, err := execute(t, root, tc.in, tc.args...)
-
 		t.Run(tc.name, func(t *testing.T) {
+			root := &cobra.Command{RunE: rootCmdRunE}
+			rootCmdFlags(root)
+			out, err := execute(t, root, tc.in, tc.args...)
+
 			if err != tc.err {
 				t.Errorf("expect %q, got %q", tc.err, err)
 				return
